@@ -1,0 +1,311 @@
+\documentclass[a4paper,11pt]{article}
+
+% ---------------------------
+%         Packages
+% ---------------------------
+\usepackage{tikz}
+\usepackage{fullpage}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{mathtools}
+\usepackage{colortbl}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{array}
+\usepackage{tabularx}
+
+\usepackage{xepersian}
+
+% ---------------------------
+%      Dark Theme Setup
+% ---------------------------
+\definecolor{CustomBackground}{HTML}{1C1C1C}
+\definecolor{AccentBlue}{HTML}{4FA3D1}
+\definecolor{AccentGreen}{HTML}{5DBB8A}
+\definecolor{LightGray}{HTML}{CCCCCC}
+\definecolor{MidGray}{HTML}{888888}
+\definecolor{CodeBg}{HTML}{111111}
+
+\pagecolor{CustomBackground}
+\color{white}
+\arrayrulecolor{white}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=AccentBlue,
+    urlcolor=AccentBlue,
+    citecolor=AccentGreen
+}
+
+% ---------------------------
+%        Font Setup
+% ---------------------------
+\settextfont{Vazir.ttf}[
+    BoldFont = Vazir-Bold.ttf,
+    Path = fonts/
+]
+\setlatintextfont{Vazir.ttf}[
+    BoldFont = Vazir-Bold.ttf,
+    Path = fonts/
+]
+
+% ---------------------------
+%       Page Geometry
+% ---------------------------
+\geometry{
+    a4paper,
+    top=2.5cm,
+    bottom=2.5cm,
+    left=2.5cm,
+    right=2.5cm
+}
+
+% ---------------------------
+%     Section Formatting
+% ---------------------------
+\renewcommand{\baselinestretch}{1.3}
+\renewcommand{\thesection}{\arabic{section}}
+
+\titleformat{\section}
+    {\Large\bfseries\color{AccentBlue}}
+    {\thesection.}{0.5em}{}[\titlerule]
+
+\titleformat{\subsection}
+    {\large\bfseries\color{AccentGreen}}
+    {\thesubsection.}{0.5em}{}
+
+\titleformat{\subsubsection}
+    {\normalsize\bfseries\color{LightGray}}
+    {\thesubsubsection.}{0.5em}{}
+
+% ---------------------------
+%       Code Listings
+% ---------------------------
+\lstset{
+    basicstyle=\ttfamily\small\color{white},
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{MidGray},
+    backgroundcolor=\color{CodeBg},
+    keywordstyle=\color{AccentBlue}\bfseries,
+    commentstyle=\color{AccentGreen},
+    stringstyle=\color{yellow},
+    numberstyle=\tiny\color{MidGray},
+    numbers=left,
+    stepnumber=1,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false
+}
+
+% ---------------------------
+%       Custom Commands
+% ---------------------------
+\newcommand{\coursename}{مبانی هوش محاسباتی}
+\newcommand{\projecttitle}{\lr{Blood Cell Classification with CNNs}}
+\newcommand{\profname}{دکتر فضل ارثی}
+\newcommand{\deptname}{گروه مهندسی کامپیوتر}
+\newcommand{\univname}{دانشگاه فردوسی مشهد}
+\newcommand{\semestername}{نیمسال دوم ۱۴۰۵–۱۴۰۴}
+
+% Student info
+\newcommand{\studentOneID}{4022262035}
+\newcommand{\studentOneName}{امیرحسین ابوالفضلی}
+\newcommand{\studentOneEmail}{\lr{abolfazli2035@gmail.com}}
+
+\newcommand{\studentTwoID}{4021262131}
+\newcommand{\studentTwoName}{آرمان بیجاری}
+\newcommand{\studentTwoEmail}{\lr{armanbijari5@gmail.com}}
+
+% ---------------------------
+%           Document
+% ---------------------------
+\begin{document}
+
+% =================================
+%           Title Page
+% =================================
+\begin{titlepage}
+    \begin{center}
+
+        % University Logo
+        \includegraphics[scale=1.1]{assets/fum-logo.png}\\[0.8cm]
+
+        % University / Department
+        {\Large\bfseries \univname}\\[0.2cm]
+        {\large \deptname}\\[0.6cm]
+
+        % Divider
+        \textcolor{AccentBlue}{\rule{0.8\linewidth}{0.6pt}}\\[0.6cm]
+
+        % Course name
+        {\large گزارش پروژه درس}\\[0.3cm]
+        {\Huge\bfseries \coursename}\\[0.5cm]
+
+        % Divider
+        \textcolor{AccentBlue}{\rule{0.8\linewidth}{0.6pt}}\\[0.8cm]
+
+        % Project Title
+        {\LARGE\bfseries \projecttitle}\\[0.4cm]
+        {\large\color{LightGray} دسته‌بندی تصاویر گلبول‌های سفید خون با شبکه‌های عصبی کانولوشنی}\\[2cm]
+
+        % Students Table
+        \begin{tabular}{r|l}
+            \textbf{نام و نام خانوادگی} & \textbf{شماره دانشجویی} \\[4pt]
+            \hline\\[-6pt]
+            \studentOneName & \studentOneID \\[4pt]
+            \studentTwoName & \studentTwoID \\
+        \end{tabular}
+
+        \vspace{1.5cm}
+
+        % Professor
+        {\large استاد: \textbf{\profname}}\\[0.5cm]
+        {\color{MidGray} \semestername}
+
+    \end{center}
+\end{titlepage}
+
+% =================================
+%        Table of Contents
+% =================================
+\tableofcontents
+\newpage
+
+% =================================
+%            Sections
+% =================================
+
+% ---- 1 ----
+\section{مقدمه}
+
+دسته‌بندی گلبول‌های سفید خون یکی از مسائل مهم در تشخیص پزشکی است. در این پروژه، از شبکه‌های عصبی کانولوشنی (\lr{CNN}) برای طبقه‌بندی تصاویر میکروسکوپی گلبول‌های سفید خون به چهار دسته استفاده می‌کنیم.
+
+% ---- 2 ----
+\section{مجموعه داده}
+
+\subsection{معرفی}
+
+مجموعه داده مورد استفاده، \lr{Blood Cell Images} نام دارد که توسط \lr{Paul Timothy Mooney} در پلتفرم \lr{Kaggle} منتشر شده است. این مجموعه شامل تصاویر رنگی \lr{JPEG} با ابعاد تقریبی $360 \times 363$ پیکسل است.
+
+\subsection{ساختار داده}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{بخش} & \textbf{تعداد تصاویر} & \textbf{تعداد تصویر به ازای هر کلاس} \\
+        \midrule
+        \lr{TRAIN} & ۹٬۹۵۸ & $\approx$ ۲٬۴۹۰ \\
+        \lr{TEST}  & ۲٬۴۸۸ & $\approx$ ۶۲۲ \\
+        \lr{TEST\_SIMPLE} & ۷۲ & متغیر \\
+        \bottomrule
+    \end{tabular}
+    \caption{توزیع مجموعه داده}
+\end{table}
+
+کلاس‌های هدف: \lr{EOSINOPHIL}، \lr{LYMPHOCYTE}، \lr{MONOCYTE}، \lr{NEUTROPHIL}.
+
+\subsection{تحلیل اکتشافی داده}
+
+% TODO: add EDA figures here
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=\linewidth]{assets/eda_samples.png}
+%     \caption{نمونه تصاویر از هر کلاس}
+% \end{figure}
+
+% ---- 3 ----
+\section{پیش‌پردازش و افزایش داده}
+
+\subsection{نرمال‌سازی}
+
+تمامی تصاویر به ابعاد $224 \times 224$ تغییر اندازه داده شده و مقادیر پیکسل به بازه $[0, 1]$ نرمال می‌شوند.
+
+\subsection{افزایش داده}
+
+برای جلوگیری از بیش‌برازش روی مجموعه آموزشی از تبدیل‌های زیر استفاده می‌شود:
+
+\begin{itemize}
+    \item چرخش تصادفی تا $\pm 15$ درجه
+    \item انعکاس افقی و عمودی
+    \item تغییر اندازه تصادفی $\pm 10\%$
+    \item جابجایی افقی و عمودی $\pm 10\%$
+\end{itemize}
+
+% ---- 4 ----
+\section{مدل \lr{CNN} از پایه}
+
+\subsection{معماری}
+
+% TODO: fill after training
+
+\subsection{نتایج آموزش}
+
+% TODO: add training curves figure
+
+% ---- 5 ----
+\section{یادگیری انتقالی}
+
+\subsection{مدل‌های مورد استفاده}
+
+چهار مدل از پیش‌آموزش‌دیده روی مجموعه \lr{ImageNet} مورد ارزیابی قرار گرفتند:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{مدل} & \textbf{ابعاد ورودی} & \textbf{دقت آزمون} \\
+        \midrule
+        \lr{MobileNetV2} & $224 \times 224$ & --- \\
+        \lr{VGG16}       & $224 \times 224$ & --- \\
+        \lr{ResNet50V2}  & $224 \times 224$ & --- \\
+        \lr{EfficientNetB3} & $300 \times 300$ & --- \\
+        \bottomrule
+    \end{tabular}
+    \caption{مقایسه مدل‌های یادگیری انتقالی}
+\end{table}
+
+% ---- 6 ----
+\section{مجموعه‌سازی مدل‌ها}
+
+% TODO: fill after training
+
+% ---- 7 ----
+\section{ارزیابی و نتایج}
+
+\subsection{ماتریس درهم‌ریختگی}
+
+% TODO: add confusion matrix figures
+
+\subsection{گزارش دسته‌بندی}
+
+% TODO: add classification report table
+
+\subsection{منحنی \lr{ROC}}
+
+% TODO: add ROC curve figure
+
+% ---- 8 ----
+\section{تفسیرپذیری مدل}
+
+\subsection{\lr{Grad-CAM}}
+
+% TODO: add Grad-CAM figures
+
+\subsection{\lr{LIME}}
+
+% TODO: add LIME figures
+
+% ---- 9 ----
+\section{نتیجه‌گیری}
+
+% TODO: fill after experiments
+
+\end{document}

@@ -1,0 +1,66 @@
+# ================================================
+#   Blood Cell Classification — Config
+# ================================================
+
+data:
+  train_dir: "../Data/TRAIN"
+  test_dir: "../Data/TEST"
+  test_simple_dir: "../Data/TEST_SIMPLE"
+  classes: ["EOSINOPHIL", "LYMPHOCYTE", "MONOCYTE", "NEUTROPHIL"]
+  num_classes: 4
+
+preprocessing:
+  image_size_default: [224, 224]      # used by most models
+  image_size_efficientnet: [300, 300] # EfficientNetB3 native size
+  batch_size: 32
+  val_split: 0.15                     # fraction of TRAIN used for validation
+  seed: 42
+
+augmentation:
+  rotation_range: 15
+  width_shift_range: 0.10
+  height_shift_range: 0.10
+  zoom_range: 0.10
+  horizontal_flip: true
+  vertical_flip: true
+  fill_mode: "nearest"
+
+custom_cnn:
+  filters: [32, 64, 128, 256]
+  dense_units: 256
+  dropout_rate: 0.5
+  learning_rate: 0.001
+  epochs: 50
+  early_stopping_patience: 7
+  reduce_lr_patience: 4
+  reduce_lr_factor: 0.3
+
+transfer_learning:
+  models:
+    - name: "MobileNetV2"
+      input_size: [224, 224]
+      unfreeze_top_layers: 30
+    - name: "VGG16"
+      input_size: [224, 224]
+      unfreeze_top_layers: 4          # last conv block
+    - name: "ResNet50V2"
+      input_size: [224, 224]
+      unfreeze_top_layers: 30
+    - name: "EfficientNetB3"
+      input_size: [300, 300]
+      unfreeze_top_layers: 30
+  head:
+    dense_units: 256
+    dropout_rate: 0.5
+  stage1:
+    epochs: 10
+    learning_rate: 0.001
+  stage2:
+    epochs: 20
+    learning_rate: 0.00001
+  early_stopping_patience: 5
+
+paths:
+  saved_models: "saved_models/"
+  figures: "outputs/figures/"
+  logs: "outputs/logs/"
