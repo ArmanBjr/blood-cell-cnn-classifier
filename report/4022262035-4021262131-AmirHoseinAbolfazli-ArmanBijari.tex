@@ -185,59 +185,130 @@
 % ---- 1 ----
 \section{مقدمه}
 
-دسته‌بندی گلبول‌های سفید خون یکی از مسائل مهم در تشخیص پزشکی است. در این پروژه، از شبکه‌های عصبی کانولوشنی (\lr{CNN}) برای طبقه‌بندی تصاویر میکروسکوپی گلبول‌های سفید خون به چهار دسته استفاده می‌کنیم.
+تشخیص نوع گلبول‌های سفید خون (\lr{White Blood Cells}) یکی از مراحل مهم در آزمایشگاه‌های پزشکی است و به پزشکان کمک می‌کند تا بیماری‌هایی مانند عفونت، آلرژی و سرطان خون را شناسایی کنند. روش سنتی این کار توسط متخصص انسانی و زیر میکروسکوپ انجام می‌شود که وقت‌گیر و خطاپذیر است.
+
+در این پروژه، از شبکه‌های عصبی کانولوشنی (\lr{CNN}) برای دسته‌بندی خودکار تصاویر میکروسکوپی گلبول‌های سفید به چهار نوع اصلی استفاده می‌کنیم. دو رویکرد اصلی بررسی می‌شود: آموزش یک \lr{CNN} از پایه، و استفاده از یادگیری انتقالی با مدل‌های از پیش آموزش‌دیده روی \lr{ImageNet}.
 
 % ---- 2 ----
 \section{مجموعه داده}
 
 \subsection{معرفی}
 
-مجموعه داده مورد استفاده، \lr{Blood Cell Images} نام دارد که توسط \lr{Paul Timothy Mooney} در پلتفرم \lr{Kaggle} منتشر شده است. این مجموعه شامل تصاویر رنگی \lr{JPEG} با ابعاد تقریبی $360 \times 363$ پیکسل است.
+مجموعه داده مورد استفاده \lr{Blood Cell Images} نام دارد که توسط \lr{Paul Timothy Mooney} در پلتفرم \lr{Kaggle} منتشر شده و از تصاویر اصلی موسسه ملی بهداشت آمریکا (\lr{NIH}) گرفته شده است. این مجموعه دارای مجوز \lr{CC0 (Public Domain)} است. تصاویر به‌صورت \lr{JPEG} رنگی با ابعاد $320 \times 240$ پیکسل ذخیره شده‌اند و در پوشه‌هایی با نام کلاس مربوطه سازماندهی شده‌اند (سازگار با \lr{flow\_from\_directory}).
 
-\subsection{ساختار داده}
+\subsection{ساختار و توزیع داده}
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{lcc}
+    \begin{tabular}{lccc}
         \toprule
-        \textbf{بخش} & \textbf{تعداد تصاویر} & \textbf{تعداد تصویر به ازای هر کلاس} \\
+        \textbf{بخش} & \textbf{تعداد کل} & \textbf{تعداد به ازای هر کلاس} & \textbf{کاربرد} \\
         \midrule
-        \lr{TRAIN} & ۹٬۹۵۸ & $\approx$ ۲٬۴۹۰ \\
-        \lr{TEST}  & ۲٬۴۸۸ & $\approx$ ۶۲۲ \\
-        \lr{TEST\_SIMPLE} & ۷۲ & متغیر \\
+        \lr{TRAIN}       & ۹٬۹۵۸ & $\approx$ ۲٬۴۹۰ & آموزش و اعتبارسنجی \\
+        \lr{TEST}        & ۲٬۴۸۸ & $\approx$ ۶۲۲   & ارزیابی نهایی \\
+        \lr{TEST\_SIMPLE}& ۷۲    & متغیر            & نمایش و دمو \\
         \bottomrule
     \end{tabular}
-    \caption{توزیع مجموعه داده}
+    \caption{توزیع مجموعه داده در سه بخش}
+    \label{tab:dataset}
 \end{table}
 
-کلاس‌های هدف: \lr{EOSINOPHIL}، \lr{LYMPHOCYTE}، \lr{MONOCYTE}، \lr{NEUTROPHIL}.
+چهار کلاس هدف عبارتند از:
+\begin{itemize}
+    \item \textbf{\lr{Eosinophil}}: گلبول سفید با دانه‌های قرمز-نارنجی مشخص، نقش در واکنش‌های آلرژیک
+    \item \textbf{\lr{Lymphocyte}}: سلول گرد با هسته بزرگ تیره، مرتبط با سیستم ایمنی
+    \item \textbf{\lr{Monocyte}}: بزرگ‌ترین گلبول سفید با هسته کلیوی شکل
+    \item \textbf{\lr{Neutrophil}}: شایع‌ترین گلبول سفید با هسته چندلوبه بنفش
+\end{itemize}
 
-\subsection{تحلیل اکتشافی داده}
+\subsection{تحلیل اکتشافی داده (\lr{EDA})}
 
-% TODO: add EDA figures here
-% \begin{figure}[H]
-%     \centering
-%     \includegraphics[width=\linewidth]{assets/eda_samples.png}
-%     \caption{نمونه تصاویر از هر کلاس}
-% \end{figure}
+\subsubsection{نمونه تصاویر از هر کلاس}
+
+شکل~\ref{fig:sample_grid} نمونه‌هایی از هر چهار کلاس را نشان می‌دهد. تفاوت بصری بین کلاس‌ها قابل مشاهده است؛ اما تشخیص \lr{Monocyte} از \lr{Lymphocyte} برای مدل دشوارتر خواهد بود.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/eda_01_sample_grid.png}
+    \caption{۸ نمونه تصادفی از هر کلاس در مجموعه آموزشی}
+    \label{fig:sample_grid}
+\end{figure}
+
+\subsubsection{توزیع کلاس‌ها}
+
+همان‌طور که در شکل~\ref{fig:class_dist} مشاهده می‌شود، توزیع کلاس‌ها در هر سه بخش تقریباً متوازن است. این ویژگی مهم است زیرا نیاز به وزن‌دهی کلاس یا روش‌های \lr{oversampling} را برطرف می‌کند.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/eda_02_class_distribution.png}
+    \caption{تعداد تصاویر هر کلاس در سه بخش \lr{TRAIN}، \lr{TEST} و \lr{TEST\_SIMPLE}}
+    \label{fig:class_dist}
+\end{figure}
+
+\subsubsection{ابعاد تصاویر}
+
+بررسی ۳۰۰ نمونه تصادفی از مجموعه آموزشی نشان داد که تمامی تصاویر دارای ابعاد یکسان $320 \times 240$ پیکسل و فرمت \lr{RGB} هستند. در مرحله آموزش، این تصاویر به $224 \times 224$ پیکسل تغییر اندازه داده می‌شوند (برای \lr{EfficientNetB3} به $300 \times 300$).
+
+\subsubsection{توزیع شدت پیکسل}
+
+شکل~\ref{fig:pixel_hist} توزیع سه کانال رنگی \lr{R}، \lr{G}، \lr{B} را برای هر کلاس نشان می‌دهد. تفاوت‌های قابل توجهی بین کلاس‌ها وجود دارد؛ به‌ویژه \lr{Eosinophil} به دلیل رنگ‌آمیزی \lr{eosin} غلبه قرمز-صورتی نشان می‌دهد، در حالی که \lr{Neutrophil} دارای توزیع آبی بیشتری است.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/eda_03_pixel_histograms.png}
+    \caption{توزیع شدت کانال‌های \lr{RGB} برای ۸۰ نمونه از هر کلاس}
+    \label{fig:pixel_hist}
+\end{figure}
+
+\subsubsection{تصویر میانگین هر کلاس}
+
+شکل~\ref{fig:mean_img} میانگین ۱۰۰ تصویر از هر کلاس را نشان می‌دهد. تصاویر میانگین تیز و قابل تشخیص هستند که نشان می‌دهد هر کلاس از نظر شکل ظاهری نسبتاً همگن است.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/eda_04_mean_images.png}
+    \caption{تصویر میانگین هر کلاس (میانگین ۱۰۰ نمونه)}
+    \label{fig:mean_img}
+\end{figure}
 
 % ---- 3 ----
 \section{پیش‌پردازش و افزایش داده}
 
 \subsection{نرمال‌سازی}
 
-تمامی تصاویر به ابعاد $224 \times 224$ تغییر اندازه داده شده و مقادیر پیکسل به بازه $[0, 1]$ نرمال می‌شوند.
+برای مدل \lr{CNN} سفارشی، مقادیر پیکسل با تقسیم بر ۲۵۵ به بازه $[0,1]$ نرمال می‌شوند. برای مدل‌های از پیش آموزش‌دیده، از تابع \lr{preprocess\_input} هر مدل استفاده می‌شود که نرمال‌سازی مناسب برای وزن‌های \lr{ImageNet} را اعمال می‌کند.
 
 \subsection{افزایش داده}
 
-برای جلوگیری از بیش‌برازش روی مجموعه آموزشی از تبدیل‌های زیر استفاده می‌شود:
+افزایش داده (\lr{Data Augmentation}) فقط روی مجموعه آموزشی اعمال می‌شود — نه روی اعتبارسنجی یا آزمون. توجیه هر تبدیل از ماهیت تصاویر میکروسکوپی گلبول‌های خونی می‌آید:
 
-\begin{itemize}
-    \item چرخش تصادفی تا $\pm 15$ درجه
-    \item انعکاس افقی و عمودی
-    \item تغییر اندازه تصادفی $\pm 10\%$
-    \item جابجایی افقی و عمودی $\pm 10\%$
-\end{itemize}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{تبدیل} & \textbf{مقدار} & \textbf{دلیل} \\
+        \midrule
+        چرخش & $\pm 15°$ & سلول‌ها در تمام جهات ظاهر می‌شوند \\
+        انعکاس افقی & فعال & تصویر آینه‌ای معتبر است \\
+        انعکاس عمودی & فعال & در تصاویر میکروسکوپی جهت بالا/پایین اهمیتی ندارد \\
+        جابجایی افقی/عمودی & $\pm 10\%$ & سلول همیشه دقیقاً در مرکز نیست \\
+        زوم & $\pm 10\%$ & تغییر بزرگنمایی میکروسکوپ \\
+        روشنایی & $\pm 20\%$ & شدت رنگ‌آمیزی بین اسلایدها متفاوت است \\
+        حالت پر کردن & \lr{nearest} & از ایجاد لبه‌های سیاه جلوگیری می‌کند \\
+        \bottomrule
+    \end{tabular}
+    \caption{تبدیل‌های افزایش داده و توجیه آن‌ها}
+    \label{tab:augmentation}
+\end{table}
+
+شکل~\ref{fig:augmentation} نمونه‌ای از تصویر اصلی در کنار ۶ نسخه افزوده‌شده را برای هر کلاس نشان می‌دهد.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/eda_05_augmentation_preview.png}
+    \caption{تصویر اصلی در مقابل ۶ نسخه افزوده‌شده برای یک نمونه از هر کلاس}
+    \label{fig:augmentation}
+\end{figure}
 
 % ---- 4 ----
 \section{مدل \lr{CNN} از پایه}
