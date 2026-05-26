@@ -13,7 +13,7 @@ preprocessing:
   image_size_default: [224, 224]      # used by most models
   image_size_efficientnet: [300, 300] # EfficientNetB3 native size
   batch_size: 32
-  val_split: 0.15                     # fraction of TRAIN used for validation
+  val_split: 0.20                     # 80/20 train/val split as required by project spec
   seed: 42
 
 augmentation:
