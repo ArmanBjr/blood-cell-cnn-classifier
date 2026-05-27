@@ -293,7 +293,7 @@ x_{\text{norm}} = \frac{x}{255}
 
 \subsection{تقسیم داده: آموزش و اعتبارسنجی}
 
-بخش \lr{TRAIN} به نسبت \textbf{۸۰\٪ آموزش} و \textbf{۲۰\٪ اعتبارسنجی} تقسیم می‌شود. این تقسیم به‌صورت تصادفی و با \lr{seed=42} برای بازتولیدپذیری انجام می‌شود:
+بخش \lr{TRAIN} به نسبت \textbf{۸۰ درصد آموزش} و \textbf{۲۰ درصد اعتبارسنجی} تقسیم می‌شود. این تقسیم به‌صورت تصادفی و با \lr{seed=42} برای بازتولیدپذیری انجام می‌شود:
 
 \begin{table}[H]
     \centering
@@ -301,8 +301,8 @@ x_{\text{norm}} = \frac{x}{255}
         \toprule
         \textbf{بخش} & \textbf{تعداد تصاویر} & \textbf{درصد} & \textbf{کاربرد} \\
         \midrule
-        آموزش (\lr{train})           & $\approx$ ۷٬۹۶۶ & ۸۰\٪ & به‌روزرسانی وزن‌های مدل \\
-        اعتبارسنجی (\lr{validation}) & $\approx$ ۱٬۹۹۲ & ۲۰\٪ & انتخاب بهترین \lr{checkpoint} \\
+        آموزش (\lr{train})           & $\approx$ ۷٬۹۶۶ & ۸۰\% & به‌روزرسانی وزن‌های مدل \\
+        اعتبارسنجی (\lr{validation}) & $\approx$ ۱٬۹۹۲ & ۲۰\% & انتخاب بهترین \lr{checkpoint} \\
         آزمون (\lr{test})            & ۲٬۴۸۸            & ---  & ارزیابی نهایی مستقل \\
         \bottomrule
     \end{tabular}
@@ -369,68 +369,523 @@ x_{\text{norm}} = \frac{x}{255}
 
 \subsection{معماری}
 
-% TODO: fill after training
+در این فاز یک شبکه‌ی \lr{CNN} ساده از پایه طراحی و آموزش داده شد، بدون هیچ‌گونه وزن از پیش آموزش‌دیده، \lr{Dropout}، \lr{BatchNorm} یا افزایش داده. هدف اصلی داشتن یک خط پایه (\lr{baseline}) برای مقایسه‌ی فازهای بعدی است.
 
-\subsection{نتایج آموزش}
+معماری شبکه شامل چهار بلوک کانولوشنی است که هر کدام از یک لایه‌ی \lr{Conv2D} با فعال‌سازی \lr{ReLU} و یک \lr{MaxPooling} تشکیل شده‌اند. در انتها دو لایه‌ی متصل کامل قرار دارد که خروجی نهایی چهار کلاس را با \lr{Softmax} پیش‌بینی می‌کند:
 
-% TODO: add training curves figure
+\[
+\text{ورودی}\ (128 \times 128 \times 3)
+\;\xrightarrow{\text{Conv32+Pool}}\;
+\xrightarrow{\text{Conv64+Pool}}\;
+\xrightarrow{\text{Conv128+Pool}}\;
+\xrightarrow{\text{Conv128+Pool}}\;
+\xrightarrow{\text{Flatten}}\;
+\xrightarrow{\text{Dense64}}\;
+\xrightarrow{\text{Dense4}}
+\]
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{llcr}
+        \toprule
+        \textbf{لایه} & \textbf{نوع} & \textbf{شکل خروجی} & \textbf{تعداد پارامتر} \\
+        \midrule
+        ورودی            & \lr{Input}       & $128 \times 128 \times 3$  & --- \\
+        بلوک ۱           & \lr{Conv2D(32)}  & $128 \times 128 \times 32$ & \lr{۸۹۶} \\
+                         & \lr{MaxPool}     & $64 \times 64 \times 32$   & --- \\
+        بلوک ۲           & \lr{Conv2D(64)}  & $64 \times 64 \times 64$   & \lr{۱۸٬۴۹۶} \\
+                         & \lr{MaxPool}     & $32 \times 32 \times 64$   & --- \\
+        بلوک ۳           & \lr{Conv2D(128)} & $32 \times 32 \times 128$  & \lr{۷۳٬۸۵۶} \\
+                         & \lr{MaxPool}     & $16 \times 16 \times 128$  & --- \\
+        بلوک ۴           & \lr{Conv2D(128)} & $16 \times 16 \times 128$  & \lr{۱۴۷٬۵۸۴} \\
+                         & \lr{MaxPool}     & $8 \times 8 \times 128$    & --- \\
+        \lr{Flatten}      & ---              & $8192$                     & --- \\
+        \lr{Dense(64)}    & \lr{ReLU}        & $64$                       & \lr{۵۲۴٬۳۵۲} \\
+        \lr{Dense(4)}     & \lr{Softmax}     & $4$                        & \lr{۲۶۰} \\
+        \midrule
+        \textbf{جمع پارامترها} & & & \textbf{\lr{۷۶۵٬۴۴۴}} \\
+        \bottomrule
+    \end{tabular}
+    \caption{معماری \lr{Baseline CNN} — کمتر از یک میلیون پارامتر}
+    \label{tab:baseline_arch}
+\end{table}
+
+تعداد کل پارامترهای قابل آموزش \lr{۷۶۵٬۴۴۴} است که زیر حد یک میلیون پارامتر مجاز می‌ماند.
+
+\subsection{تنظیمات آموزش}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{تنظیم} & \textbf{مقدار} \\
+        \midrule
+        بهینه‌ساز         & \lr{Adam} \\
+        نرخ یادگیری      & $0.0001$ \\
+        تابع هزینه        & \lr{Categorical Cross-Entropy} \\
+        اندازه \lr{batch} & $32$ \\
+        تعداد \lr{epoch}  & $30$ \\
+        اندازه تصویر      & $128 \times 128$ پیکسل \\
+        نرمال‌سازی        & تقسیم بر $255$ \\
+        ذخیره بهترین مدل  & \lr{ModelCheckpoint} بر اساس \lr{val\_accuracy} \\
+        \bottomrule
+    \end{tabular}
+    \caption{تنظیمات آموزش \lr{Baseline CNN}}
+    \label{tab:baseline_train}
+\end{table}
+
+\subsection{نمودار آموزش}
+
+شکل~\ref{fig:baseline_curves} روند تغییرات \lr{loss} و دقت در طول \lr{۳۰} \lr{epoch} را برای داده‌های آموزشی و اعتبارسنجی نشان می‌دهد.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/phase2_01_training_curves.png}
+    \caption{نمودار \lr{loss} و دقت در طول آموزش — \lr{Baseline CNN}}
+    \label{fig:baseline_curves}
+\end{figure}
+
+هر دو منحنی آموزش و اعتبارسنجی با هم پیشرفت کردند و تا \lr{epoch} آخر نیز \lr{val accuracy} در حال بهتر شدن بود. در پایان آموزش، دقت آموزشی به \lr{۹۷.۵۵}\% و دقت اعتبارسنجی به \lr{۹۴.۵۷}\% رسید — اختلاف تنها \lr{۲.۹۸}\% است که نشان می‌دهد \lr{overfitting} شدیدی رخ نداده است.
+
+\subsection{ارزیابی روی مجموعه آزمون}
+
+بهترین مدل ذخیره‌شده (بر اساس \lr{val\_accuracy}) روی مجموعه‌ی آزمون مستقل ارزیابی شد:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lc}
+        \toprule
+        \textbf{معیار} & \textbf{مقدار} \\
+        \midrule
+        دقت (\lr{Accuracy})           & \lr{۷۹.۵۳}\% \\
+        دقت ماکرو (\lr{Precision})    & \lr{۸۱.۷۸}\% \\
+        فراخوانی ماکرو (\lr{Recall})  & \lr{۷۹.۵۵}\% \\
+        \lr{F1-score} ماکرو           & \lr{۸۰.۱۹}\% \\
+        \lr{AUC} ماکرو                & \lr{۹۵.۵۲}\% \\
+        \bottomrule
+    \end{tabular}
+    \caption{نتایج ارزیابی \lr{Baseline CNN} روی مجموعه آزمون}
+    \label{tab:baseline_test}
+\end{table}
+
+عملکرد مدل به تفکیک هر کلاس در جدول زیر آمده است:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{کلاس} & \textbf{\lr{Precision}} & \textbf{\lr{Recall}} & \textbf{\lr{F1}} & \textbf{\lr{AUC}} \\
+        \midrule
+        \lr{Eosinophil} & \lr{۰.۶۵} & \lr{۰.۷۳} & \lr{۰.۶۹} & \lr{۰.۹۱۵۰} \\
+        \lr{Lymphocyte} & \lr{۱.۰۰} & \lr{۰.۹۳} & \lr{۰.۹۶} & \lr{۰.۹۹۹۶} \\
+        \lr{Monocyte}   & \lr{۰.۹۷} & \lr{۰.۷۶} & \lr{۰.۸۵} & \lr{۰.۹۸۴۸} \\
+        \lr{Neutrophil} & \lr{۰.۶۶} & \lr{۰.۷۶} & \lr{۰.۷۱} & \lr{۰.۹۲۱۵} \\
+        \bottomrule
+    \end{tabular}
+    \caption{عملکرد به تفکیک کلاس — \lr{Baseline CNN}}
+    \label{tab:baseline_perclass}
+\end{table}
+
+\subsection{ماتریس درهم‌ریختگی}
+
+شکل~\ref{fig:baseline_cm} ماتریس درهم‌ریختگی مدل روی مجموعه آزمون را نشان می‌دهد.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.72\linewidth]{../outputs/figures/phase2_02_confusion_matrix.png}
+    \caption{ماتریس درهم‌ریختگی \lr{Baseline CNN} روی مجموعه آزمون}
+    \label{fig:baseline_cm}
+\end{figure}
+
+\subsection{منحنی \lr{ROC}}
+
+شکل~\ref{fig:baseline_roc} منحنی‌های \lr{ROC} به تفکیک هر کلاس را نشان می‌دهد. سطح زیر منحنی برای \lr{Lymphocyte} تقریباً \lr{۱.۰۰} است که نشان می‌دهد مدل این کلاس را با اطمینان بالا از بقیه جدا می‌کند.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{../outputs/figures/phase2_03_roc_curves.png}
+    \caption{منحنی \lr{ROC} برای چهار کلاس — \lr{Baseline CNN}}
+    \label{fig:baseline_roc}
+\end{figure}
+
+\subsection{نمونه پیش‌بینی‌ها}
+
+شکل~\ref{fig:baseline_preds} چند نمونه از پیش‌بینی‌های مدل را نشان می‌دهد. عنوان سبز نشانه‌ی پیش‌بینی درست و عنوان قرمز نشانه‌ی اشتباه است.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/phase2_04_sample_predictions.png}
+    \caption{نمونه‌هایی از پیش‌بینی‌های \lr{Baseline CNN} روی مجموعه آزمون}
+    \label{fig:baseline_preds}
+\end{figure}
+
+\subsection{تحلیل نتایج}
+
+\textbf{شکاف اعتبارسنجی–آزمون:}
+اختلاف دقت اعتبارسنجی (\lr{۹۴.۵۷}\%) با دقت آزمون (\lr{۷۹.۵۳}\%) حدود \lr{۱۵} درصد است. این شکاف ناشی از \lr{overfitting} نیست چون منحنی‌های آموزش و اعتبارسنجی با هم پیش رفتند. دلیل احتمالی این است که \lr{ImageDataGenerator} هنگام \lr{validation\_split}، آخرین \lr{۲۰}\% فایل‌ها را بر اساس ترتیب الفبایی نام فایل انتخاب می‌کند نه به‌صورت تصادفی — بنابراین مجموعه اعتبارسنجی ممکن است به‌خوبی نماینده‌ی توزیع واقعی آزمون نباشد.
+
+\textbf{بهترین و بدترین کلاس‌ها:}
+\lr{Lymphocyte} با \lr{F1} برابر \lr{۰.۹۶} و \lr{AUC} برابر \lr{۰.۹۹۹۶} بهترین عملکرد را داشت. این کلاس دارای هسته‌ای بزرگ و گرد و تیره است که از نظر بصری کاملاً متمایز است. در مقابل، \lr{Eosinophil} و \lr{Neutrophil} با \lr{F1} حدود \lr{۰.۶۹} و \lr{۰.۷۱} بدترین عملکرد را داشتند. هر دوی این‌ها گرانولوسیت هستند و هسته‌ای چندلوبه‌ای دارند؛ تنها تفاوت اصلی آن‌ها در نوع و رنگ دانه‌های داخل سلول است که در تصاویر با اندازه کوچک‌شده‌ی \lr{128×128} بخشی از اطلاعات آن‌ها از دست می‌رود.
+
+\textbf{نتیجه‌گیری:}
+این مدل پایه با \lr{۷۶۵٬۴۴۴} پارامتر و بدون هیچ تکنیک تنظیم‌سازی، به دقت آزمون \lr{۷۹.۵۳}\% و \lr{AUC} ماکرو \lr{۹۵.۵۲}\% رسید. این اعداد مبنای مقایسه برای فازهای بعدی هستند که در آن‌ها از افزایش داده، \lr{BatchNorm}، \lr{Dropout} و یادگیری انتقالی استفاده خواهد شد.
 
 % ---- 5 ----
-\section{یادگیری انتقالی}
+\section{مدل \lr{CNN} بهبودیافته}
 
-\subsection{مدل‌های مورد استفاده}
+\subsection{تغییرات نسبت به مدل پایه}
 
-چهار مدل از پیش‌آموزش‌دیده روی مجموعه \lr{ImageNet} مورد ارزیابی قرار گرفتند:
+در این فاز، معماری مدل پایه‌ی فاز دوم ثابت نگه داشته شد و سه دسته تغییر روی آن اعمال گردید:
+
+\begin{enumerate}
+    \item \textbf{افزایش داده (\lr{Data Augmentation}):} پنج تبدیل تصادفی تنها در مرحله‌ی آموزش اعمال شد: چرخش افقی و عمودی (\lr{RandomFlip})، چرخش تصادفی تا \lr{۱۵} درجه (\lr{RandomRotation})، زوم تصادفی تا \lr{۱۰}\% (\lr{RandomZoom})، جابجایی تا \lr{۱۰}\% در هر جهت (\lr{RandomTranslation})، و تغییر روشنایی ±\lr{۲۰}\% (\lr{RandomBrightness}).
+
+    \item \textbf{\lr{Batch Normalization}:} لایه‌های \lr{BN} پس از هر لایه‌ی کانولوشن و پیش از تابع فعال‌سازی درج شدند تا آمار ورودی را تنظیم کرده و همگرایی پایدارتری فراهم شود.
+
+    \item \textbf{\lr{Dropout}:} لایه‌ی \lr{Dropout} با نرخ‌های مختلف پس از لایه‌های متراکم افزوده شد تا از بیش‌برازش جلوگیری شود.
+\end{enumerate}
+
+معماری پایه شامل \lr{۳} بلوک کانولوشن با \lr{32}، \lr{64}، و \lr{128} فیلتر، به همراه یک لایه‌ی متراکم \lr{256} نورونی، بدون تغییر باقی ماند.
+
+\subsection{تنظیم فراپارامترها (\lr{Hyperparameter Tuning})}
+
+پنج آزمایش طراحی و اجرا شد. در تمامی آزمایش‌ها از بهینه‌ساز \lr{Adam} با نرخ یادگیری \lr{1e-4} و \lr{EarlyStopping} بر اساس \lr{val\_loss} (با صبر \lr{۱۰} دوره) استفاده شد. جدول~\ref{tab:phase3_exp} تنظیمات و نتایج بهترین دوره‌ی هر آزمایش را نشان می‌دهد.
+
+\begin{table}[H]
+    \centering
+    \caption{آزمایش‌های فاز سوم و نتایج بهترین دوره}
+    \label{tab:phase3_exp}
+    \begin{tabular}{lccccccc}
+        \toprule
+        \textbf{آزمایش} & \textbf{\lr{BN}} & \textbf{\lr{Dropout}} & \textbf{\lr{Batch}} & \textbf{\lr{ReduceLR}} & \textbf{دوره} & \textbf{\lr{Val Loss}} & \textbf{دقت اعتبارسنجی} \\
+        \midrule
+        \lr{exp1} (تنها افزایش داده)                            & خیر & \lr{0.0} & \lr{32} & خیر & \lr{34} & \lr{0.0816} & \lr{۹۸.۷۹}\% \\
+        \lr{exp2} (افزایش داده + \lr{Dropout 0.3})              & خیر & \lr{0.3} & \lr{32} & خیر & \lr{39} & \lr{0.0788} & \lr{۹۸.۵۹}\% \\
+        \lr{exp3} (\lr{BN} + \lr{Dropout 0.3})                  & بله & \lr{0.3} & \lr{32} & خیر & \lr{19} & \lr{1.3853} & \lr{۰.۰۵}\% \\
+        \lr{exp4} (\lr{BN} + \lr{Dropout 0.5} + \lr{ReduceLR})  & بله & \lr{0.5} & \lr{32} & بله & \lr{19} & \lr{1.3860} & \lr{۰.۰۵}\% \\
+        \lr{exp5} (\lr{BN} + \lr{Dropout 0.5} + \lr{batch=64})  & بله & \lr{0.5} & \lr{64} & بله & \lr{48} & \lr{0.0428} & \lr{۹۹.۵۰}\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\textbf{ناهنجاری \lr{exp3} و \lr{exp4} — شبکه‌ی مرده (\lr{Dead Network}):}
+آزمایش‌های سوم و چهارم از ابتدا در حالت «شبکه‌ی مرده» گیر کردند: خطا ثابت روی \lr{ln(4) ≈ 1.386} (معادل حدس تصادفی برای \lr{۴} کلاس) ماند و دقت اعتبارسنجی صفر بود. علت اصلی ناسازگاری \lr{BatchNorm} با اندازه‌ی دسته‌ی کوچک (\lr{batch=32}) در \lr{TF 2.21} است: آمارهای میانگین و واریانس که \lr{BN} هر دسته محاسبه می‌کند با \lr{32} نمونه بسیار پرنویز هستند و شبکه از همان ابتدا به حالت تباهیده‌ای می‌افتد که از آن خارج نمی‌شود. افزایش اندازه‌ی دسته به \lr{64} در \lr{exp5} این مشکل را برطرف کرد.
+
+\subsection{نمودارهای آموزش}
+
+شکل~\ref{fig:phase3_all_curves} منحنی‌های خطا و دقت همه‌ی آزمایش‌ها را با هم نشان می‌دهد. خطوط تخت \lr{exp3} و \lr{exp4} مشکل شبکه‌ی مرده را به‌وضوح آشکار می‌کنند. شکل~\ref{fig:phase3_best_curves} منحنی‌های بهترین مدل (\lr{exp5}) را به‌تنهایی نمایش می‌دهد.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../outputs/figures/phase3_01_all_training_curves.png}
+    \caption{منحنی‌های آموزش و اعتبارسنجی همه‌ی آزمایش‌های فاز سوم}
+    \label{fig:phase3_all_curves}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth]{../outputs/figures/phase3_06_best_training_curves.png}
+    \caption{منحنی‌های آموزش بهترین مدل (\lr{exp5}) — کاهش یکنواخت \lr{val\_loss} تا دوره‌ی \lr{48}}
+    \label{fig:phase3_best_curves}
+\end{figure}
+
+\subsection{نتایج کامل مدل نهایی روی مجموعه‌ی آزمون}
+
+بهترین مدل (\lr{exp5\_aug\_bn\_drop05\_b64}) روی مجموعه‌ی آزمون مستقل (\lr{2487} تصویر) ارزیابی شد. جدول~\ref{tab:phase3_test} نتایج کامل را نشان می‌دهد.
+
+\begin{table}[H]
+    \centering
+    \caption{نتایج کامل مدل نهایی فاز سوم (\lr{exp5}) روی مجموعه‌ی آزمون}
+    \label{tab:phase3_test}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{کلاس} & \textbf{دقت (\lr{Precision})} & \textbf{بازخوانی (\lr{Recall})} & \textbf{\lr{F1}} & \textbf{\lr{AUC}} \\
+        \midrule
+        \lr{EOSINOPHIL}  & \lr{0.74} & \lr{0.66} & \lr{0.69} & \lr{0.9277} \\
+        \lr{LYMPHOCYTE}  & \lr{1.00} & \lr{0.55} & \lr{0.71} & \lr{0.9998} \\
+        \lr{MONOCYTE}    & \lr{0.79} & \lr{0.72} & \lr{0.76} & \lr{0.8650} \\
+        \lr{NEUTROPHIL}  & \lr{0.60} & \lr{0.97} & \lr{0.74} & \lr{0.9509} \\
+        \midrule
+        میانگین ماکرو   & \lr{0.78} & \lr{0.73} & \lr{0.73} & \lr{0.9359} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+دقت کل روی مجموعه‌ی آزمون: \lr{۷۲.۳۸}\%، خطای آزمون: \lr{1.4701}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{../outputs/figures/phase3_04_roc_curves.png}
+    \caption{منحنی‌های \lr{ROC} مدل نهایی فاز سوم}
+    \label{fig:phase3_roc}
+\end{figure}
+
+\subsection{مقایسه‌ی عددی با فاز دوم}
+
+جدول~\ref{tab:phase3_vs_phase2} مقایسه‌ی مستقیم بهترین مدل فاز سوم با مدل پایه‌ی فاز دوم را نشان می‌دهد.
+
+\begin{table}[H]
+    \centering
+    \caption{مقایسه‌ی مدل پایه (فاز دوم) با بهترین مدل فاز سوم}
+    \label{tab:phase3_vs_phase2}
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{معیار} & \textbf{فاز دوم (مدل پایه)} & \textbf{فاز سوم (\lr{exp5})} & \textbf{تغییر} \\
+        \midrule
+        دقت آزمون          & \lr{۷۹.۵۳}\% & \lr{۷۲.۳۸}\% & \lr{۷.۱۵−} \lr{pp} \\
+        دقت اعتبارسنجی     & \lr{۹۴.۵۷}\% & \lr{۹۹.۵۰}\% & \lr{۴.۹۳+} \lr{pp} \\
+        \lr{F1} ماکرو      & \lr{0.80}    & \lr{0.73}    & \lr{۰.۰۷−} \\
+        \lr{AUC} ماکرو     & \lr{0.9552}  & \lr{0.9359}  & \lr{۰.۰۱۹۳−} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{تحلیل ماتریس درهم‌ریختگی}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.72\textwidth]{../outputs/figures/phase3_03_confusion_matrix.png}
+    \caption{ماتریس درهم‌ریختگی مدل نهایی فاز سوم روی مجموعه‌ی آزمون}
+    \label{fig:phase3_cm}
+\end{figure}
+
+چند نکته‌ی کلیدی از ماتریس درهم‌ریختگی:
+
+\begin{itemize}
+    \item \textbf{\lr{NEUTROPHIL} بیش‌تشخیص:} با \lr{Recall=0.97} اما \lr{Precision=0.60}، مدل نمونه‌های زیادی از سایر کلاس‌ها — خصوصاً \lr{LYMPHOCYTE} و \lr{EOSINOPHIL} — را به‌اشتباه \lr{NEUTROPHIL} تشخیص می‌دهد.
+
+    \item \textbf{\lr{LYMPHOCYTE} کم‌بازخوانی:} با \lr{Precision=1.00} اما \lr{Recall=0.55}، هر نمونه‌ای که مدل \lr{LYMPHOCYTE} می‌خواند درست است، اما حدود \lr{۴۵}\% از \lr{LYMPHOCYTE}های واقعی از دست می‌روند و احتمالاً به \lr{NEUTROPHIL} نسبت داده می‌شوند.
+
+    \item \textbf{\lr{EOSINOPHIL}:} با \lr{Recall=0.66}، حدود \lr{۳۴}\% از نمونه‌ها درست تشخیص داده نشدند. از آنجا که \lr{Eosinophil} و \lr{Neutrophil} هر دو گرانولوسیت با هسته‌ی چندلوبه‌ای هستند، تشابه ظاهری آن‌ها دلیل اصلی این اشتباهات است.
+
+    \item \textbf{\lr{MONOCYTE}:} با \lr{F1=0.76}، بهترین عملکرد را در میان کلاس‌های مشکل‌دار داشت.
+\end{itemize}
+
+\subsection{علت کاهش عملکرد نسبت به فاز دوم}
+
+علی‌رغم دقت اعتبارسنجی بالاتر (\lr{۹۹.۵۰}\% در برابر \lr{۹۴.۵۷}\%)، دقت آزمون از \lr{۷۹.۵۳}\% به \lr{۷۲.۳۸}\% کاهش یافت. دو دلیل اصلی این پدیده عبارتند از:
+
+\begin{enumerate}
+    \item \textbf{جابجایی توزیع (\lr{Distribution Shift}):} پوشه‌های \lr{TRAIN} و \lr{TEST} دارای ویژگی‌های تصویری متفاوتی هستند (روشنایی، کنتراست، رنگ‌بندی پس‌زمینه). مدل فاز سوم با افزایش داده‌ی قوی‌تر به توزیع آموزشی بهتر تطبیق یافت، اما همین امر تعمیم‌پذیری روی توزیع متفاوت آزمون را کاهش داد. افزایش داده طراحی‌شده برای تنوع درون‌توزیعی است، نه پوشش‌دادن به تفاوت‌های بین‌توزیعی.
+
+    \item \textbf{معیار اعتبارسنجی گمراه‌کننده:} دقت اعتبارسنجی بالا (\lr{99.5}\%) تصویر خوش‌بینانه‌ای داد، چون زیرمجموعه‌ی اعتبارسنجی از همان \lr{TRAIN} جدا شده و با توزیع آزمون فرق دارد. پس از رفع باگ \lr{validation\_split} در فاز قبل، دقت اعتبارسنجی بسیار بالا شد، اما این به‌تنهایی تضمین‌کننده‌ی دقت آزمون نیست.
+\end{enumerate}
+
+در مجموع، اگرچه تکنیک‌های افزایش داده، \lr{BN}، و \lr{Dropout} به بهبود آموزش کمک کردند، مشکل اصلی — جابجایی توزیع میان مجموعه‌های \lr{TRAIN} و \lr{TEST} — با این روش‌ها برطرف نشد. انتظار می‌رود فازهای بعدی که از مدل‌های از‌پیش‌آموزش‌دیده‌ی بزرگ‌تر بهره می‌برند، این شکاف را کاهش دهند.
+
+% ---- 6 ----
+\section{تفسیر مدل}
+
+برای اینکه بفهمیم مدل واقعاً به چه چیزی در تصویر توجه می‌کند، دو کار انجام دادیم: اول وزن فیلترهای کانولوشن را بررسی کردیم، و بعد از \lr{Grad-CAM} استفاده کردیم تا ببینیم هنگام تشخیص هر سلول، مدل کجای تصویر را نگاه می‌کند. مدل مورد استفاده همان \lr{exp5} از فاز سوم است (\lr{BN + Dropout 0.5 + batch=64}).
+
+\subsection{فیلترهای کانولوشن}
+
+شکل~\ref{fig:phase4_filters} وزن فیلترهای سه لایه را نشان می‌دهد: اولین لایه (\lr{conv2d}، \lr{32} فیلتر)، دومین لایه (\lr{conv2d\_1}، \lr{64} فیلتر)، و چهارمین لایه (\lr{conv2d\_3}، \lr{128} فیلتر).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../outputs/figures/phase4_01_conv_filters.png}
+    \caption{وزن فیلترهای سه لایه‌ی کانولوشن — از چپ: لایه‌ی اول، دوم، چهارم}
+    \label{fig:phase4_filters}
+\end{figure}
+
+در لایه‌ی اول هر فیلتر مستقیماً روی پیکسل‌های \lr{RGB} کار می‌کند؛ به همین دلیل وزن‌ها به شکل پچ‌های رنگی کوچک دیده می‌شوند. تنوع رنگی زیاد نشان می‌دهد مدل از همان ابتدا به طیف رنگی متفاوتی — از بنفش تا صورتی تا سبز — حساس شده که در رنگ‌آمیزی \lr{H\&E} تصاویر خون معنادار است. در لایه‌های عمیق‌تر دیگر نمی‌توان فیلترها را با رنگ تفسیر کرد چون هر فیلتر روی ترکیبی از ده‌ها کانال قبلی عمل می‌کند؛ اینجا بزرگی وزن‌ها را به صورت خاکستری نشان می‌دهیم. الگوهای تیره‌وروشن در این لایه‌ها با فیلترهای لبه‌یاب و بافت‌یاب تطابق دارند.
+
+\subsection{نقشه‌های فعال‌سازی}
+
+برای هر کلاس یک نمونه‌ی درست با اطمینان بالا انتخاب کردیم و خروجی چهار لایه‌ی فعال‌سازی را با هم مقایسه کردیم. شکل~\ref{fig:phase4_fmaps} نتیجه را برای کلاس \lr{NEUTROPHIL} نشان می‌دهد.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../outputs/figures/phase4_02_feature_maps_neutrophil.png}
+    \caption{نقشه‌های فعال‌سازی چهار مرحله برای یک نمونه‌ی \lr{NEUTROPHIL}}
+    \label{fig:phase4_fmaps}
+\end{figure}
+
+در لایه‌ی اول (\lr{128×128}) تقریباً همه‌ی نقشه‌ها فعال‌اند و ساختار کلی تصویر — مرز سلول‌ها و رنگ پس‌زمینه — خوانا است. با رفتن به لایه‌های بعدی، نقشه‌ها خلوت‌تر می‌شوند و فقط نواحی خاص‌تری روشن می‌مانند. در لایه‌ی آخر (\lr{16×16}) فقط چند نورون فعال هستند که به نواحی بسیار مشخصی مثل هسته‌ی سلول اشاره دارند. این رفتار کاملاً طبیعی است: هرچه عمق بیشتر، ویژگی انتزاعی‌تر و مکان‌یابی دقیق‌تر.
+\newpage
+\subsection{\lr{Grad-CAM}}
+
+\lr{Grad-CAM} از گرادیان امتیاز کلاس هدف نسبت به خروجی آخرین لایه‌ی کانولوشن استفاده می‌کند تا نشان دهد کدام نواحی تصویر بیشترین سهم را در آن تصمیم داشتند. نواحی قرمز و زرد در نقشه‌ی حرارتی جاهایی هستند که مدل به آن‌ها توجه کرده.
+
+شکل~\ref{fig:phase4_gcam_correct} نتیجه را برای هشت نمونه‌ی درست از مجموعه‌ی آزمون نشان می‌دهد — دو نمونه از هر کلاس.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\textwidth]{../outputs/figures/phase4_03_gradcam_correct.png}
+    \caption{\lr{Grad-CAM} برای پیش‌بینی‌های درست — دو نمونه از هر کلاس}
+    \label{fig:phase4_gcam_correct}
+\end{figure}
+
+در همه‌ی این موارد نقطه‌ی داغ روی سلول اصلی قرار گرفته و نسبتاً فشرده است. میانگین مساحت فعال (نواحی با \lr{heatmap > 0.5}) برای همه‌ی کلاس‌ها بین \lr{4.5}\% تا \lr{5.8}\% بود؛ یعنی مدل تنها روی یک ناحیه‌ی کوچک و مشخص از تصویر تمرکز می‌کند نه کل صحنه.
+\subsection{مقایسه‌ی پیش‌بینی‌های درست و اشتباه}
+
+شکل~\ref{fig:phase4_gcam_wrong} همین تحلیل را برای هشت نمونه‌ی اشتباه نشان می‌دهد که مدل آن‌ها را با اطمینان بالا اشتباه تشخیص داده.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\textwidth]{../outputs/figures/phase4_04_gradcam_wrong.png}
+    \caption{\lr{Grad-CAM} برای پیش‌بینی‌های اشتباه}
+    \label{fig:phase4_gcam_wrong}
+\end{figure}
+
+تفاوت با نمونه‌های درست کاملاً مشهود است. نقشه‌ی حرارتی پراکنده است و روی ناحیه‌ی مشخصی تمرکز ندارد؛ در بعضی موارد مدل به پس‌زمینه یا سلول‌های قرمز اطراف توجه کرده نه به سلول اصلی. این رفتار نشان می‌دهد وقتی مدل گیج است، به جای پیدا کردن ویژگی تمایزدهنده، به اطلاعات زمینه‌ای تکیه می‌کند.
+
+شکل~\ref{fig:phase4_gcam_cmp} این تفاوت را برای دو کلاس به صورت مقایسه‌ای نشان می‌دهد.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.72\textwidth]{../outputs/figures/phase4_05_gradcam_comparison.png}
+    \caption{مقایسه‌ی \lr{Grad-CAM} برای پیش‌بینی درست و اشتباه از یک کلاس}
+    \label{fig:phase4_gcam_cmp}
+\end{figure}
+
+در نمونه‌ی درست \lr{LYMPHOCYTE} نقطه‌ی داغ دقیقاً روی هسته‌ی گرد و بزرگ قرار گرفته — همان چیزی که این سلول را بصری متمایز می‌کند. در نمونه‌ی اشتباه همان کلاس که به \lr{NEUTROPHIL} تشخیص داده شده، توجه مدل پراکنده است و به سلول‌های قرمز اطراف هم کشیده شده. برای \lr{EOSINOPHIL} هم همین الگو تکرار می‌شود: نمونه‌ی درست روی هسته‌ی چندلوبه‌ای متمرکز است، نمونه‌ی اشتباه روی هیچ ناحیه‌ی مشخصی تمرکز ندارد. این تحلیل دلیل \lr{Recall} پایین \lr{LYMPHOCYTE} (\lr{0.55}) و \lr{EOSINOPHIL} (\lr{0.66}) در فاز سوم را روشن می‌کند: مدل در نمونه‌های دشوار نمی‌تواند ویژگی تمایزدهنده را پیدا کند.
+
+% ---- 7 ----
+\section{یادگیری انتقالی با \lr{MobileNetV2}}
+
+در فازهای قبل بهترین دقت آزمون به \lr{72.38\%} رسید. یکی از دلایل اصلی این عدد، جابجایی توزیع میان مجموعه‌های \lr{TRAIN} و \lr{TEST} بود — ویژگی‌هایی که مدل از داده‌های آموزشی یاد گرفته با آنچه در آزمون دیده می‌شود کاملاً منطبق نیست. مدل‌های از‌پیش‌آموزش‌دیده روی \lr{ImageNet} این مشکل را کاهش می‌دهند چون از همان ابتدا ویژگی‌های پایه‌ای قوی‌تری دارند که خوب‌تر تعمیم می‌یابند.
+
+برای این فاز از \lr{MobileNetV2} استفاده کردیم. این مدل نسبت به گزینه‌های سنگین‌تر مثل \lr{ResNet50} یا \lr{EfficientNet} پارامتر کمتری دارد و روی \lr{GPU} های معمولی راحت‌تر آموزش می‌بیند، در حالی که دقت قابل قبولی هم ارائه می‌دهد.
+
+\subsection{تغییر لایه‌ی خروجی}
+
+\lr{MobileNetV2} در حالت استاندارد برای طبقه‌بندی \lr{1000} کلاس \lr{ImageNet} طراحی شده. برای تطبیق آن با مسئله‌ی ما (\lr{4} کلاس)، لایه‌ی \lr{top} اصلی حذف شد (\lr{include\_top=False}) و یک سر طبقه‌بند سبک جایگزین آن شد:
+
+\begin{enumerate}
+    \item \lr{GlobalAveragePooling2D} — خروجی سه‌بُعدی پشته‌ی کانولوشنی را به یک بردار یک‌بُعدی تبدیل می‌کند. در مقایسه با \lr{Flatten}، پارامتر کمتری دارد و به موقعیت مکانی ویژگی‌ها حساسیت کمتری نشان می‌دهد.
+    \item \lr{Dropout} — برای جلوگیری از \lr{overfitting} سر طبقه‌بند.
+    \item \lr{Dense(4, softmax)} — لایه‌ی خروجی با \lr{4} نورون برای چهار کلاس سلول خونی.
+\end{enumerate}
+
+نکته‌ی مهم پیاده‌سازی این است که در تابع \lr{forward pass}، مدل پایه با آرگومان \lr{training=False} فراخوانی می‌شود. این کار لایه‌های \lr{BatchNormalization} درون \lr{MobileNetV2} را در حالت استنتاج نگه می‌دارد — یعنی از میانگین و واریانس تجمیعی استفاده می‌کنند نه از آمار دسته‌ی جاری. بدون این تنظیم، آموزش سر طبقه‌بند با پارامترهای \lr{BN} منجمدشده ناپایدار می‌شود.
+
+\subsection{پیش‌پردازش ورودی}
+
+\lr{MobileNetV2} انتظار دارد پیکسل‌ها در بازه‌ی $[-1, +1]$ باشند، نه $[0, 1]$. به همین دلیل به جای تقسیم ساده بر \lr{255}، از تابع \lr{mobilenet\_v2.preprocess\_input} استفاده شد که پیکسل‌ها را از $[0, 255]$ به $[-1, +1]$ نگاشت می‌کند. این تفاوت ظاهراً جزئی در عمل تأثیر قابل‌توجهی روی کیفیت آموزش دارد، چون وزن‌های \lr{ImageNet} با همین توزیع ورودی بهینه شده‌اند.
+
+\subsection{پروتکل آموزش دو مرحله‌ای}
+
+\subsubsection{مرحله‌ی اول — آموزش سر طبقه‌بند}
+
+در مرحله‌ی اول تمام لایه‌های \lr{MobileNetV2} منجمد (\lr{freeze}) شدند و فقط لایه‌های سر طبقه‌بند آموزش دیدند. نرخ یادگیری $10^{-3}$ انتخاب شد — چون این لایه‌ها از صفر شروع می‌کنند و می‌توان با قدم‌های بزرگ‌تر آموزش داد. هدف این مرحله این است که سر طبقه‌بند ابتدا یاد بگیرد ویژگی‌های \lr{MobileNetV2} را تفسیر کند، بدون اینکه وزن‌های از‌پیش‌آموزش‌دیده را خراب کند.
+
+\subsubsection{مرحله‌ی دوم — \lr{Fine-tuning} لایه‌های بالایی}
+
+پس از همگرایی مرحله‌ی اول، چند لایه‌ی آخر \lr{backbone} از حالت منجمد خارج (\lr{unfreeze}) شدند و آموزش با نرخ یادگیری بسیار کوچک‌تر ($10^{-5}$) ادامه یافت. دلیل انتخاب نرخ یادگیری کوچک این است که وزن‌های \lr{ImageNet} در این لایه‌ها از قبل خوب هستند؛ فقط نیاز به تطبیق ظریف با دامنه‌ی تصاویر خون داریم. اگر نرخ یادگیری بالا باشد، این وزن‌ها خراب می‌شوند و دقت به سطح تصادفی سقوط می‌کند.
+
+\subsection{تنظیم ابرپارامترها}
+
+در مجموع چهار آزمایش انجام شد. دو آزمایش در مرحله‌ی اول با نرخ \lr{Dropout} متفاوت، و دو آزمایش در مرحله‌ی دوم با تعداد لایه‌های \lr{unfreeze} متفاوت.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{clcccc}
+        \toprule
+        \textbf{آزمایش} & \textbf{شرح} & \textbf{مرحله} & \textbf{\lr{Dropout}} & \textbf{لایه‌های آزادشده} & \textbf{بهترین \lr{Val Acc}} \\
+        \midrule
+        \lr{exp1} & سر منجمد، \lr{Dropout} سبک & \lr{1} & \lr{0.3} & — & \lr{88.85\%} \\
+        \lr{exp2} & سر منجمد، \lr{Dropout} قوی & \lr{1} & \lr{0.5} & — & \lr{84.58\%} \\
+        \lr{exp3} & \lr{Fine-tune} کم‌عمق     & \lr{2} & بهترین \lr{S1} & \lr{30} لایه‌ی آخر & \lr{98.95\%} \\
+        \lr{exp4} & \lr{Fine-tune} عمیق‌تر     & \lr{2} & بهترین \lr{S1} & \lr{50} لایه‌ی آخر & \lr{99.60\%} \\
+        \bottomrule
+    \end{tabular}
+    \caption{آزمایش‌های تنظیم ابرپارامتر — فاز پنجم}
+    \label{tab:phase5_experiments}
+\end{table}
+
+در هر دو مرحله از \lr{EarlyStopping} با صبر \lr{7} و \lr{ReduceLROnPlateau} با فاکتور \lr{0.5} و صبر \lr{4} استفاده شد تا از آموزش بیش از حد و نوسانات نرخ یادگیری جلوگیری شود.
+
+\subsection{نمودارهای آموزش}
+
+شکل~\ref{fig:phase5_curves} نمودارهای دقت و \lr{Loss} را برای هر چهار آزمایش نشان می‌دهد.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../reports/figures/phase5_01_all_curves.png}
+    \caption{نمودارهای آموزش چهار آزمایش — فاز پنجم}
+    \label{fig:phase5_curves}
+\end{figure}
+
+در آزمایش‌های مرحله‌ی اول (\lr{exp1} و \lr{exp2}) دقت اعتبارسنجی نسبتاً سریع به یک سقف می‌رسد چون تمام قدرت ویژگی‌سازی از \lr{ImageNet} می‌آید و سر طبقه‌بند فقط باید یاد بگیرد این ویژگی‌ها را تفسیر کند. در آزمایش‌های مرحله‌ی دوم (\lr{exp3} و \lr{exp4}) آموزش از جایی که مرحله‌ی اول متوقف شده ادامه می‌یابد و با قدم‌های آرام‌تری بهبود می‌کند.
+
+\subsection{ارزیابی روی مجموعه‌ی آزمون}
+
+\subsubsection{ماتریس درهم‌ریختگی}
+
+شکل~\ref{fig:phase5_cm} ماتریس درهم‌ریختگی را برای بهترین مدل مرحله‌ی اول و بهترین مدل مرحله‌ی دوم نشان می‌دهد.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../reports/figures/phase5_02_confusion_matrix.png}
+    \caption{ماتریس درهم‌ریختگی روی مجموعه‌ی آزمون — مرحله‌ی اول و دوم}
+    \label{fig:phase5_cm}
+\end{figure}
+
+\subsubsection{منحنی‌های \lr{ROC}}
+
+شکل~\ref{fig:phase5_roc} منحنی‌های \lr{ROC} را به تفکیک کلاس نشان می‌دهد. مساحت زیر منحنی (\lr{AUC}) برای هر کلاس در داخل نمودار درج شده است.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../reports/figures/phase5_03_roc_curves.png}
+    \caption{منحنی‌های \lr{ROC} روی مجموعه‌ی آزمون — مرحله‌ی اول و دوم}
+    \label{fig:phase5_roc}
+\end{figure}
+
+\subsubsection{نمونه‌های پیش‌بینی}
+
+شکل~\ref{fig:phase5_samples} شانزده نمونه از مجموعه‌ی آزمون را با برچسب واقعی و برچسب پیش‌بینی‌شده نشان می‌دهد. پیش‌بینی‌های درست با کادر سبز و اشتباه‌ها با کادر قرمز مشخص شده‌اند.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{../reports/figures/phase5_04_sample_predictions.png}
+    \caption{نمونه‌های پیش‌بینی روی مجموعه‌ی آزمون — بهترین مدل فاز پنجم}
+    \label{fig:phase5_samples}
+\end{figure}
+
+\subsection{مقایسه‌ی نهایی با فازهای قبل}
+
+جدول~\ref{tab:phase_comparison} دقت آزمون تمام فازها را کنار هم قرار می‌دهد و شکل~\ref{fig:phase5_cmp} همین مقایسه را به صورت نمودار میله‌ای نشان می‌دهد.
 
 \begin{table}[H]
     \centering
     \begin{tabular}{lcc}
         \toprule
-        \textbf{مدل} & \textbf{ابعاد ورودی} & \textbf{دقت آزمون} \\
+        \textbf{مدل} & \textbf{فاز} & \textbf{دقت آزمون} \\
         \midrule
-        \lr{MobileNetV2} & $224 \times 224$ & --- \\
-        \lr{VGG16}       & $224 \times 224$ & --- \\
-        \lr{ResNet50V2}  & $224 \times 224$ & --- \\
-        \lr{EfficientNetB3} & $300 \times 300$ & --- \\
+        بهترین \lr{CNN} سفارشی        & فاز دوم  & \lr{69.98\%} \\
+        بهترین \lr{CNN} بهبودیافته    & فاز سوم  & \lr{72.38\%} \\
+        \lr{MobileNetV2} مرحله‌ی اول  & فاز پنجم & \lr{55.69\%} \\
+        \lr{MobileNetV2} مرحله‌ی دوم  & فاز پنجم & \lr{74.67\%} \\
         \bottomrule
     \end{tabular}
-    \caption{مقایسه مدل‌های یادگیری انتقالی}
+    \caption{مقایسه‌ی دقت آزمون در تمام فازها}
+    \label{tab:phase_comparison}
 \end{table}
 
-% ---- 6 ----
-\section{مجموعه‌سازی مدل‌ها}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{../reports/figures/phase5_05_phase_comparison.png}
+    \caption{مقایسه‌ی دقت آزمون — فاز دوم، سوم، و پنجم}
+    \label{fig:phase5_cmp}
+\end{figure}
 
-% TODO: fill after training
+\subsection{تحلیل نهایی}
 
-% ---- 7 ----
-\section{ارزیابی و نتایج}
+نتایج این فاز تصویر جالب و در عین حال صادقانه‌ای از محدودیت‌های این دیتاست ارائه می‌دهد.
 
-\subsection{ماتریس درهم‌ریختگی}
+\textbf{شکاف اعتبارسنجی و آزمون.}
+بزرگ‌ترین چیزی که این فاز آشکار کرد همان مشکلی بود که از فاز سوم می‌شناختیم: جابجایی توزیع میان \lr{TRAIN} و \lr{TEST}. \lr{exp1} در اعتبارسنجی به \lr{88.85\%} رسید اما روی آزمون فقط \lr{55.69\%} داد — یعنی مدل با وجود وزن‌های \lr{ImageNet}، به همان دام \lr{overfitting} به توزیع آموزشی افتاد. \lr{exp4} این شکاف را کوچک‌تر کرد: اعتبارسنجی \lr{99.60\%}، آزمون \lr{74.67\%}. اما شکاف هنوز وجود دارد و نشان می‌دهد ریشه‌ی مشکل در خود دیتاست است، نه فقط در معماری مدل.
 
-% TODO: add confusion matrix figures
+\textbf{مقایسه با فازهای قبل.}
+بهترین مدل این فاز (\lr{exp4}، دقت آزمون \lr{74.67\%}) نسبت به بهترین مدل فاز سوم (\lr{72.38\%}) کمی بهتر شد — حدود \lr{2.3} واحد درصد. این بهبود کوچک‌تر از آن چیزی است که معمولاً از \lr{Transfer Learning} انتظار می‌رود، اما با توجه به جابجایی توزیع دیتاست قابل توضیح است: وزن‌های \lr{ImageNet} کمک کردند ویژگی‌های بهتری استخراج شود، اما مشکل اصلی — که تفاوت توزیع است — با هیچ معماری‌ای به‌تنهایی برطرف نمی‌شود.
 
-\subsection{گزارش دسته‌بندی}
+\textbf{تحلیل کلاس به کلاس.}
+در بهترین مدل (\lr{exp4}) کلاس \lr{LYMPHOCYTE} با \lr{Precision} بالای \lr{0.99} بهترین عملکرد را داشت — شاید چون این سلول ویژگی بصری مشخص‌تری (هسته‌ی گرد بزرگ) دارد که \lr{MobileNetV2} به خوبی آن را یاد گرفت. در مقابل، \lr{MONOCYTE} با \lr{Recall} پایین \lr{0.59} مشکل‌دارترین کلاس بود: مدل اکثر \lr{MONOCYTE} های واقعی را به کلاس‌های دیگر تشخیص داد، که احتمالاً به دلیل شباهت ظاهری این سلول با \lr{LYMPHOCYTE} در نمونه‌های آزمون است.
 
-% TODO: add classification report table
-
-\subsection{منحنی \lr{ROC}}
-
-% TODO: add ROC curve figure
-
-% ---- 8 ----
-\section{تفسیرپذیری مدل}
-
-\subsection{\lr{Grad-CAM}}
-
-% TODO: add Grad-CAM figures
-
-\subsection{\lr{LIME}}
-
-% TODO: add LIME figures
-
-% ---- 9 ----
-\section{نتیجه‌گیری}
-
-% TODO: fill after experiments
+\textbf{نتیجه‌گیری کلی.}
+از میان همه‌ی مدل‌های آزمایش‌شده در این پروژه، \lr{MobileNetV2} با \lr{Fine-tuning} (\lr{exp4}) بهترین دقت آزمون را داشت. اما بهبود نسبت به فاز سوم اندک بود، چون مشکل اصلی این دیتاست — جابجایی توزیع بین مجموعه‌های آموزش و آزمون — یک مشکل ساختاری است که با انتخاب معماری بهتر به‌تنهایی حل نمی‌شود. برای حل اساسی‌تر این مشکل، روش‌هایی مثل \lr{domain adaptation} یا جمع‌آوری داده‌ی آموزشی متنوع‌تر لازم است.
 
 \end{document}

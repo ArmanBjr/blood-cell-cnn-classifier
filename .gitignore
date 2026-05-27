@@ -1,5 +1,6 @@
 # Model weights (too large for git)
 saved_models/
+models/
 
 # Jupyter checkpoints
 .ipynb_checkpoints/
@@ -34,4 +35,6 @@ report/*.fdb_latexmk
 
 # Data (kept outside repo)
 Data/
+data/
 ../Data/
+blood_cell_data/
