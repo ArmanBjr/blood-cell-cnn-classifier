@@ -1,0 +1,9 @@
+Configuration,Test Acc %,Macro F1,Macro AUC
+Phase 2 — Custom CNN,85.61,,
+Phase 3 — Improved CNN,87.94,,
+EfficientNetV2B0,86.85,0.872,0.947
+EfficientNetV2B0 + TTA,87.66,0.88,0.96
+MobileNetV2,88.66,0.889,0.93
+MobileNetV2 + TTA,88.58,0.889,0.969
+Ensemble (Eff+Mob),88.14,0.884,0.939
+Ensemble + TTA  ★FINAL,88.34,0.886,0.971

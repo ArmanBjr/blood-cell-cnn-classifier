@@ -32,6 +32,13 @@ report/*.synctex.gz
 report/*.toc
 report/*.fls
 report/*.fdb_latexmk
+report/*.tex
+report/fonts/
+report/assets/
+
+# Scratch / debug outputs
+outputs/_*.png
+reports/
 
 # Data (kept outside repo)
 Data/
