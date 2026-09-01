@@ -1,5 +1,7 @@
 # Blood Cell Classification with CNNs
 
+![CI](https://github.com/ArmanBjr/blood-cell-cnn-classifier/actions/workflows/ci.yml/badge.svg)
+
 Project 2 for **Fundamentals of Computational Intelligence** at Ferdowsi University of Mashhad (FUM). Four-class white blood cell image classification using custom CNNs, architecture search, transfer learning, interpretability (Grad-CAM), and an honest evaluation pipeline on the held-out test set.
 
 > Course report: [`report/report.pdf`](report/report.pdf)
